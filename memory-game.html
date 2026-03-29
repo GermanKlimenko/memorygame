@@ -199,14 +199,19 @@ body::before {
 .lb-tab.active { border-color:var(--accent); background:rgba(61,142,240,.09); color:var(--accent); }
 .lb-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); font-size:.8rem; }
 .lb-row:last-child { border-bottom:none; }
+.lb-row.is-me-row { background:rgba(0,212,170,.07); border-radius:10px; padding:8px 10px; margin:2px -10px; border-bottom:none; border:1px solid rgba(0,212,170,.25); }
 .lb-rank { font-family:'IBM Plex Mono',monospace; font-weight:600; width:24px; text-align:center; color:var(--muted); flex-shrink:0; }
 .lb-rank.gold{color:#ffd700;} .lb-rank.silver{color:#c0c0c0;} .lb-rank.bronze{color:#cd7f32;}
 .lb-name  { flex:1; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .lb-name.is-me { color:var(--accent2); }
 .lb-score { font-family:'IBM Plex Mono',monospace; font-weight:600; color:var(--accent); min-width:32px; text-align:right; }
-.lb-detail  { font-size:.68rem; color:var(--muted); margin-top:1px; }
+.lb-detail  { font-size:.66rem; color:var(--muted); margin-top:1px; }
+.lb-date    { font-size:.62rem; color:var(--muted); opacity:.7; margin-top:2px; }
 .lb-empty   { text-align:center; color:var(--muted); font-size:.82rem; padding:20px 0; }
 .lb-loading { text-align:center; color:var(--muted); font-size:.82rem; padding:16px 0; }
+/* Убираем полосу прокрутки */
+.obox { scrollbar-width:none; }
+.obox::-webkit-scrollbar { display:none; }
 
 /* ── Блок места в рейтинге ── */
 .rank-block { background:linear-gradient(135deg,rgba(61,142,240,.08),rgba(0,212,170,.06)); border:1px solid rgba(61,142,240,.25); border-radius:var(--radius); padding:14px; margin-bottom:4px; }
@@ -236,7 +241,7 @@ body::before {
     <button class="btn" onclick="startGame()">Начать тест</button>
     <button class="btn secondary" style="margin-top:8px;" onclick="showLeaderboard()">🏆 Таблица рейтинга</button>
     <div class="tg-status"><span class="tg-dot"></span><span id="tgStatusText">Инициализация…</span></div>
-    <div style="text-align:center;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:#ffffff;font-weight:600;margin-top:8px;letter-spacing:1px;">v2026-03-29 · 18:45</div>
+    <div style="text-align:center;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:#ffffff;font-weight:600;margin-top:8px;letter-spacing:1px;">v2026-03-29 · 19:10</div>
   </div>
 </div>
 
@@ -378,7 +383,16 @@ async function renderLb(lvl){
   const rc=['gold','silver','bronze'], medals=['🥇','🥈','🥉'];
   document.getElementById('lbContent').innerHTML=rows.map((r,i)=>{
     const isMe=myId&&r.userId===myId, rank=i<3?rc[i]:'', medal=i<3?medals[i]:`${i+1}.`;
-    return `<div class="lb-row"><div class="lb-rank ${rank}">${medal}</div><div style="flex:1;overflow:hidden;"><div class="lb-name ${isMe?'is-me':''}">${r.name}${isMe?' 👈':''}</div><div class="lb-detail">${r.moves} ходов · ${r.elapsed}с · ${r.errors} ошибок</div></div><div class="lb-score">${r.score}</div></div>`;
+    const date = r.createdAt ? new Date(r.createdAt).toLocaleDateString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div class="lb-row${isMe?' is-me-row':''}">
+      <div class="lb-rank ${rank}">${medal}</div>
+      <div style="flex:1;overflow:hidden;">
+        <div class="lb-name ${isMe?'is-me':''}">${r.name}${isMe?' 👈':''}</div>
+        <div class="lb-detail">${r.moves} ходов · ${r.elapsed}с · ${r.errors} ошибок</div>
+        ${date?`<div class="lb-date">${date}</div>`:''}
+      </div>
+      <div class="lb-score">${r.score}</div>
+    </div>`;
   }).join('');
 }
 
