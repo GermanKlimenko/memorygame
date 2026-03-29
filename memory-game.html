@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Тест рабочей памяти</title>
+
+<!-- Telegram Mini App SDK — ОБЯЗАТЕЛЬНО первым -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBRhR77gcXp2SWURPzs9EGO_-_HEaVfpVo",
+    authDomain: "memory-game-df49b.firebaseapp.com",
+    projectId: "memory-game-df49b",
+    storageBucket: "memory-game-df49b.firebasestorage.app",
+    messagingSenderId: "332156167980",
+    appId: "1:332156167980:web:e0a454732e880ca89d6e89"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // Сохранить результат
+  window.saveScore = async function(data) {
+    try {
+      await addDoc(collection(db, "scores"), data);
+    } catch(e) { console.error("Firebase save error:", e); }
+  };
+
+  // Загрузить топ-10 для уровня
+  window.loadLeaderboard = async function(lvl) {
+    try {
+      const q = query(
+        collection(db, "scores"),
+        where("level", "==", lvl),
+        orderBy("score", "desc"),
+        limit(10)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map(d => d.data());
+    } catch(e) { console.error("Firebase load error:", e); return []; }
+  };
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+/* ── Telegram тема: подхватываем цвета из Telegram если доступны ── */
+:root {
+  --bg:       var(--tg-theme-bg-color,           #070b14);
+  --surface:  var(--tg-theme-secondary-bg-color, #0d1220);
+  --text:     var(--tg-theme-text-color,         #e8edf5);
+  --btn-bg:   var(--tg-theme-button-color,       #3d8ef0);
+  --btn-text: var(--tg-theme-button-text-color,  #ffffff);
+
+  --surface2: #131928;
+  --border:   #1e2d47;
+  --border2:  #253550;
+  --accent:   #3d8ef0;
+  --accent2:  #00d4aa;
+  --accent3:  #f0a03d;
+  --danger:   #f05050;
+  --muted:    #5a6a85;
+  --muted2:   #8898b0;
+  --radius:   12px;
+  --flip:     0.4s;
+  --tg-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Manrope', sans-serif;
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  padding: 12px 12px calc(24px + var(--tg-safe-bottom));
+  overflow-x: hidden;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(61,142,240,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(61,142,240,.03) 1px, transparent 1px);
+  background-size: 40px 40px; pointer-events: none; z-index: 0;
+}
+
+/* ── Шапка с именем пользователя Telegram ── */
+.tg-header {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 680px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; padding: 8px 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.tg-user { display: flex; align-items: center; gap: 10px; }
+.tg-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: .85rem; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.tg-name { font-size: .88rem; font-weight: 700; }
+.tg-sub  { font-size: .66rem; color: var(--muted); margin-top: 1px; }
+.logo-mono {
+  font-family: 'IBM Plex Mono', monospace; font-size: .65rem; font-weight: 600;
+  letter-spacing: 2.5px; text-transform: uppercase; color: var(--accent); opacity: .8;
+}
+
+/* ── Обёртка ── */
+.wrapper {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; width: 100%; max-width: 680px;
+}
+
+/* ── HUD ── */
+.hud { width: 100%; display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+.hud-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 8px 10px; display: flex; flex-direction: column; gap: 2px;
+}
+.hud-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .52rem; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted);
+}
+.hud-val { font-family: 'IBM Plex Mono', monospace; font-size: 1.15rem; font-weight: 600; color: var(--text); }
+.hud-val.accent { color: var(--accent); }
+.hud-val.green  { color: var(--accent2); }
+#errorsVal.has-errors { color: var(--danger); animation: pulseD .6s infinite alternate; }
+@keyframes pulseD { to { transform: scale(1.1); } }
+
+/* ── Баннер фазы кодирования ── */
+.memo-banner {
+  width: 100%;
+  background: linear-gradient(90deg, rgba(61,142,240,.1), rgba(0,212,170,.07));
+  border: 1px solid rgba(61,142,240,.3); border-radius: var(--radius); padding: 9px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  opacity: 0; pointer-events: none; transition: opacity .3s;
+}
+.memo-banner.visible { opacity: 1; }
+.memo-text { font-size: .82rem; font-weight: 700; color: var(--accent); }
+.memo-countdown { font-family: 'IBM Plex Mono', monospace; font-size: 1.35rem; font-weight: 600; color: var(--accent2); }
+
+/* ── Прогресс ── */
+.progress-wrap { width: 100%; height: 4px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+.progress-bar {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 99px; transition: width .4s ease;
+}
+
+/* ── Карточки ── */
+.grid { display: grid; gap: 6px; width: 100%; }
+.card { aspect-ratio: 1; perspective: 600px; cursor: pointer; }
+.card-inner {
+  width: 100%; height: 100%; position: relative; transform-style: preserve-3d;
+  transition: transform var(--flip) cubic-bezier(.4,1.3,.6,1); border-radius: var(--radius);
+}
+.card.open .card-inner, .card.matched .card-inner { transform: rotateY(180deg); }
+.card-face {
+  position: absolute; inset: 0; border-radius: var(--radius); backface-visibility: hidden;
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(1.6rem, 6vw, 2.8rem); user-select: none;
+}
+.card-back-face { background: var(--surface2); border: 1px solid var(--border2); }
+.card-back-face::after {
+  content: ''; width: 36%; height: 36%;
+  border: 1px solid rgba(61,142,240,.2); border-radius: 4px; transform: rotate(45deg);
+}
+.card-front-face {
+  background: var(--surface); border: 1px solid var(--border2);
+  transform: rotateY(180deg); box-shadow: 0 2px 12px rgba(0,0,0,.4);
+}
+.card.matched .card-front-face {
+  border-color: var(--accent2); background: rgba(0,212,170,.07);
+  box-shadow: 0 0 12px rgba(0,212,170,.2);
+}
+.card.wrong .card-inner { animation: shake .35s ease; }
+@keyframes shake {
+  0%,100% { transform: rotateY(180deg) translateX(0); }
+  30%      { transform: rotateY(180deg) translateX(-6px); }
+  70%      { transform: rotateY(180deg) translateX(6px); }
+}
+
+/* ── Оверлеи ── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(4,7,16,.93); backdrop-filter: blur(8px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; z-index: 200; padding: 16px; transition: opacity .35s;
+}
+.overlay.hidden { opacity: 0; pointer-events: none; }
+.obox {
+  background: var(--surface); border: 1px solid var(--border2); border-radius: 20px;
+  padding: 28px 24px; width: 100%; max-width: 440px; box-shadow: 0 30px 80px rgba(0,0,0,.6);
+}
+
+/* ── Старт ── */
+.start-icon    { font-size: 2.8rem; margin-bottom: 12px; display: block; text-align: center; }
+.start-title   { font-size: 1.4rem; font-weight: 800; text-align: center; margin-bottom: 5px; }
+.start-subtitle {
+  font-family: 'IBM Plex Mono', monospace; font-size: .6rem; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 16px;
+}
+.start-desc {
+  color: var(--muted2); font-size: .84rem; line-height: 1.6; text-align: center;
+  margin-bottom: 20px; border-top: 1px solid var(--border); padding-top: 16px;
+}
+.levels { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; margin-bottom: 18px; }
+.level-btn {
+  background: var(--surface2); border: 1.5px solid var(--border2); border-radius: var(--radius);
+  padding: 12px 6px; cursor: pointer; text-align: center;
+  transition: border-color .2s, background .2s, transform .15s;
+  display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.level-btn:hover  { border-color: var(--accent); transform: translateY(-2px); }
+.level-btn.active { border-color: var(--accent); background: rgba(61,142,240,.09); }
+.level-tag {
+  font-family: 'IBM Plex Mono', monospace; font-size: .52rem; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted);
+}
+.level-btn.active .level-tag { color: var(--accent); }
+.level-name { font-size: .85rem; font-weight: 700; }
+.level-grid { font-size: .68rem; color: var(--muted2); }
+.level-btn[data-lvl="0"] .level-name { color: var(--accent2); }
+.level-btn[data-lvl="1"] .level-name { color: var(--accent3); }
+.level-btn[data-lvl="2"] .level-name { color: var(--danger);  }
+
+/* ── Кнопки ── */
+.btn {
+  font-family: 'Manrope', sans-serif; font-size: .92rem; font-weight: 800;
+  padding: 13px 28px; border: none; border-radius: 50px; cursor: pointer;
+  background: var(--btn-bg); color: var(--btn-text);
+  transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 4px 20px rgba(61,142,240,.3); width: 100%;
+}
+.btn:hover  { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(61,142,240,.4); }
+.btn:active { transform: translateY(0); }
+.btn.secondary {
+  background: transparent; border: 1.5px solid var(--border2);
+  color: var(--text); box-shadow: none;
+}
+.btn.secondary:hover { border-color: var(--accent); color: var(--accent); box-shadow: none; }
+.btn.share {
+  background: linear-gradient(135deg, #229ED9, #0088cc);
+  box-shadow: 0 4px 20px rgba(34,158,217,.3); margin-top: 16px;
+}
+.btn.share:hover { box-shadow: 0 8px 28px rgba(34,158,217,.4); }
+.btn-row { display: flex; gap: 8px; margin-top: 16px; }
+
+/* ── Результат ── */
+.result-header {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);
+}
+.result-icon  { font-size: 2.6rem; }
+.result-title { font-size: 1.18rem; font-weight: 800; text-align: center; }
+.result-level {
+  font-family: 'IBM Plex Mono', monospace; font-size: .58rem;
+  letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted);
+}
+.score-row   { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.score-label {
+  font-family: 'IBM Plex Mono', monospace; font-size: .6rem;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+}
+.score-val { font-family: 'IBM Plex Mono', monospace; font-size: 1.5rem; font-weight: 600; color: var(--accent); }
+.score-bar-wrap { width: 100%; height: 7px; background: var(--surface2); border-radius: 99px; overflow: hidden; margin-bottom: 10px; }
+.score-bar { height: 100%; border-radius: 99px; width: 0%; transition: width 1s cubic-bezier(.25,1,.5,1); }
+.score-desc { font-size: .8rem; color: var(--muted2); line-height: 1.58; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
+.section-title {
+  font-family: 'IBM Plex Mono', monospace; font-size: .56rem;
+  letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+}
+.section-title.mt { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 4px; }
+.profile-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; }
+.profile-item-label { font-size: .66rem; color: var(--muted); margin-bottom: 3px; }
+.profile-item-val   { font-size: .85rem; font-weight: 700; }
+.tip { font-size: .78rem; color: var(--muted2); line-height: 1.5; padding: 7px 10px 7px 24px; position: relative; margin-bottom: 4px; }
+.tip::before { content: '→'; position: absolute; left: 6px; color: var(--accent); font-weight: 700; }
+.history-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 0; border-bottom: 1px solid var(--border); font-size: .76rem;
+}
+.history-row:last-child { border-bottom: none; }
+.history-lvl   { color: var(--muted2); }
+.history-score { font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+.badge-new     { color: var(--accent2); font-size: .65rem; margin-left: 5px; }
+
+/* ── Таблица рейтинга ── */
+.lb-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.lb-tab {
+  flex: 1; padding: 8px; text-align: center; cursor: pointer;
+  background: var(--surface2); border: 1.5px solid var(--border2);
+  border-radius: var(--radius); font-size: .78rem; font-weight: 700;
+  transition: border-color .2s, background .2s;
+}
+.lb-tab.active { border-color: var(--accent); background: rgba(61,142,240,.09); color: var(--accent); }
+
+.lb-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--border); font-size: .8rem;
+}
+.lb-row:last-child { border-bottom: none; }
+.lb-rank {
+  font-family: 'IBM Plex Mono', monospace; font-weight: 600;
+  width: 24px; text-align: center; color: var(--muted); flex-shrink: 0;
+}
+.lb-rank.gold   { color: #ffd700; }
+.lb-rank.silver { color: #c0c0c0; }
+.lb-rank.bronze { color: #cd7f32; }
+.lb-name { flex: 1; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-name.is-me  { color: var(--accent2); }
+.lb-score { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--accent); }
+.lb-detail { font-size: .68rem; color: var(--muted); margin-top: 1px; }
+.lb-empty { text-align: center; color: var(--muted); font-size: .82rem; padding: 20px 0; }
+.lb-loading { text-align: center; color: var(--muted); font-size: .82rem; padding: 16px 0; }
+
+/* ── Статус Telegram в стартовом экране ── */
+.tg-status {
+  display: flex; align-items: center; gap: 7px; font-size: .72rem; color: var(--muted);
+  margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); justify-content: center;
+}
+.tg-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent2); flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- ═══════ СТАРТОВЫЙ ОВЕРЛЕЙ ═══════ -->
+<div class="overlay" id="startOverlay">
+  <div class="obox">
+    <span class="start-icon">🧠</span>
+    <div class="start-title">Тест рабочей памяти</div>
+    <div class="start-subtitle">Working Memory Assessment</div>
+    <div class="start-desc">
+      Методика основана на парадигме отсроченного узнавания. За 10 секунд закодируйте пространственное расположение стимулов. Система оценит точность, скорость и эффективность извлечения из рабочей памяти.
+    </div>
+    <div class="levels" id="levelSelect">
+      <div class="level-btn active" data-lvl="0" onclick="selectLevel(0)">
+        <span class="level-tag">Уровень I</span>
+        <span class="level-name">Новичок</span>
+        <span class="level-grid">4×4 · 8 пар</span>
+      </div>
+      <div class="level-btn" data-lvl="1" onclick="selectLevel(1)">
+        <span class="level-tag">Уровень II</span>
+        <span class="level-name">Средний</span>
+        <span class="level-grid">5×5 · 12 пар</span>
+      </div>
+      <div class="level-btn" data-lvl="2" onclick="selectLevel(2)">
+        <span class="level-tag">Уровень III</span>
+        <span class="level-name">Эксперт</span>
+        <span class="level-grid">6×6 · 18 пар</span>
+      </div>
+    </div>
+    <button class="btn" onclick="startGame()">Начать тест</button>
+    <button class="btn secondary" style="margin-top:8px;" onclick="showLeaderboard()">🏆 Таблица рейтинга</button>
+    <div class="tg-status">
+      <span class="tg-dot"></span>
+      <span id="tgStatusText">Инициализация…</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ РЕЗУЛЬТАТ ═══════ -->
+<div class="overlay hidden" id="winOverlay">
+  <div class="obox" style="max-height:90vh;overflow-y:auto;">
+    <div class="result-header">
+      <div class="result-icon" id="resIcon">🏅</div>
+      <div class="result-title" id="resTitle">—</div>
+      <div class="result-level" id="resLevel">—</div>
+    </div>
+
+    <div class="score-row">
+      <span class="score-label">Индекс памяти (WMI)</span>
+      <span class="score-val" id="scoreVal">—</span>
+    </div>
+    <div class="score-bar-wrap"><div class="score-bar" id="scoreBar"></div></div>
+    <div class="score-desc" id="scoreDesc">—</div>
+
+    <div class="section-title">Психологический профиль</div>
+    <div class="profile-grid">
+      <div class="profile-item"><div class="profile-item-label">Время выполнения</div><div class="profile-item-val" id="pTime">—</div></div>
+      <div class="profile-item"><div class="profile-item-label">Точность ходов</div><div class="profile-item-val" id="pAccuracy">—</div></div>
+      <div class="profile-item"><div class="profile-item-label">Скорость кодирования</div><div class="profile-item-val" id="pSpeed">—</div></div>
+      <div class="profile-item"><div class="profile-item-label">Общая эффективность</div><div class="profile-item-val" id="pEff">—</div></div>
+    </div>
+
+    <div class="section-title mt">Рекомендации</div>
+    <div id="tipsList"></div>
+
+    <div class="section-title mt">История сессий — этот уровень</div>
+    <div id="historyList"></div>
+
+    <!-- Кнопка "Поделиться" — показывается только внутри Telegram -->
+    <button class="btn share" id="shareBtn" style="display:none;" onclick="shareResult()">
+      ✈️ Поделиться результатом в Telegram
+    </button>
+
+    <div class="btn-row">
+      <button class="btn secondary" onclick="backToMenu()">Выбрать уровень</button>
+      <button class="btn" onclick="restartSameLevel()">Повторить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ РЕЙТИНГ ═══════ -->
+<div class="overlay hidden" id="lbOverlay">
+  <div class="obox" style="max-height:90vh;overflow-y:auto;">
+    <div class="result-header" style="margin-bottom:14px;padding-bottom:14px;">
+      <div class="result-icon">🏆</div>
+      <div class="result-title">Таблица рейтинга</div>
+      <div class="result-level">Топ-10 игроков по уровням</div>
+    </div>
+
+    <div class="lb-tabs">
+      <div class="lb-tab active" onclick="switchLbTab(0)">Новичок</div>
+      <div class="lb-tab"       onclick="switchLbTab(1)">Средний</div>
+      <div class="lb-tab"       onclick="switchLbTab(2)">Эксперт</div>
+    </div>
+
+    <div id="lbContent"><div class="lb-loading">Загрузка…</div></div>
+
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn" onclick="closeLb()">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ ИГРОВОЙ ЭКРАН ═══════ -->
+<div class="tg-header">
+  <div class="tg-user">
+    <div class="tg-avatar" id="tgAvatar">?</div>
+    <div>
+      <div class="tg-name" id="tgName">Гость</div>
+      <div class="tg-sub">WMA · Тест рабочей памяти</div>
+    </div>
+  </div>
+  <div class="logo-mono" id="sessionBadge">УРОВЕНЬ —</div>
+</div>
+
+<div class="wrapper">
+  <div class="hud">
+    <div class="hud-card"><div class="hud-label">Время</div><div class="hud-val accent" id="timerVal">0</div></div>
+    <div class="hud-card"><div class="hud-label">Ходов</div><div class="hud-val" id="movesVal">0</div></div>
+    <div class="hud-card"><div class="hud-label">Ошибок</div><div class="hud-val" id="errorsVal">0</div></div>
+    <div class="hud-card"><div class="hud-label">Пары</div><div class="hud-val green" id="pairsVal">0/0</div></div>
+  </div>
+
+  <div class="memo-banner" id="memoBanner">
+    <span class="memo-text">▶ Фаза кодирования — запоминайте расположение</span>
+    <span class="memo-countdown" id="memoSec">10</span>
+  </div>
+
+  <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  TELEGRAM MINI APP — инициализация
+// ══════════════════════════════════════════════
+const tg = window.Telegram?.WebApp;
+let tgUser = null;
+let isTelegram = false;
+
+if (tg) {
+  tg.ready();    // сообщаем Telegram что страница готова
+  tg.expand();   // разворачиваем на весь экран
+
+  // Отключаем закрытие свайпом вниз
+  if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+
+  tgUser = tg.initDataUnsafe?.user || null;
+  isTelegram = true;
+
+  // Показываем кнопку "Поделиться" только в Telegram
+  document.getElementById('shareBtn').style.display = 'block';
+}
+
+// Заполняем аватар и имя пользователя
+(function initUserUI() {
+  const nameEl   = document.getElementById('tgName');
+  const avatarEl = document.getElementById('tgAvatar');
+  const statusEl = document.getElementById('tgStatusText');
+
+  if (tgUser) {
+    const fullName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ');
+    nameEl.textContent   = fullName || tgUser.username || 'Пользователь';
+    avatarEl.textContent = (fullName || tgUser.username || 'U')[0].toUpperCase();
+    statusEl.textContent = `@${tgUser.username || 'telegram'} · сессия активна`;
+  } else {
+    nameEl.textContent   = 'Гость';
+    avatarEl.textContent = '👤';
+    statusEl.textContent = isTelegram ? 'Telegram · анонимная сессия' : 'Браузер · откройте в Telegram';
+  }
+})();
+
+// ══════════════════════════════════════════════
+//  КОНСТАНТЫ
+// ══════════════════════════════════════════════
+const SYMBOLS = [
+  '🍎','🍊','🍋','🍇','🍓','🍒','🍑','🥝','🍌','🥑',
+  '🥕','🌽','🥦','🌶️','🍆','🥔','🧅','🫐',
+  '1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣'
+];
+
+const LEVELS = [
+  { name:'Новичок', tag:'УРОВЕНЬ I',   cols:4, pairs:8  },
+  { name:'Средний', tag:'УРОВЕНЬ II',  cols:5, pairs:12 },
+  { name:'Эксперт', tag:'УРОВЕНЬ III', cols:6, pairs:18 },
+];
+
+const TIME_NORM   = [60,  90,  150];
+const IDEAL_MOVES = [8,   12,  18 ];
+
+let selectedLevel = 0;
+let cards=[], flipped=[], matched=0, moves=0, errors=0;
+let timerInterval=null, elapsed=0;
+let locked=false, gameActive=false;
+let lastScore=0, lastLvl=0;
+
+// ══════════════════════════════════════════════
+//  ИСТОРИЯ: Telegram CloudStorage → localStorage
+// ══════════════════════════════════════════════
+let history = [];
+
+function loadHistory() {
+  if (tg?.CloudStorage) {
+    tg.CloudStorage.getItem('wma_history', (err, val) => {
+      if (!err && val) { try { history = JSON.parse(val); } catch(e) {} }
+    });
+  } else {
+    try { history = JSON.parse(localStorage.getItem('wma_history') || '[]'); } catch(e) {}
+  }
+}
+
+function saveHistory() {
+  const data = JSON.stringify(history.slice(-40));
+  if (tg?.CloudStorage) {
+    tg.CloudStorage.setItem('wma_history', data);
+  } else {
+    try { localStorage.setItem('wma_history', data); } catch(e) {}
+  }
+}
+
+loadHistory();
+
+// ══════════════════════════════════════════════
+//  ПОДЕЛИТЬСЯ РЕЗУЛЬТАТОМ
+// ══════════════════════════════════════════════
+function shareResult() {
+  const lvlName  = LEVELS[lastLvl].name;
+  const grid     = LEVELS[lastLvl].cols + '×' + LEVELS[lastLvl].cols;
+  const stars    = lastScore>=85?'🏆' : lastScore>=70?'🥇' : lastScore>=50?'🥈' : '🥉';
+  const userName = tgUser ? (tgUser.first_name || tgUser.username || 'Игрок') : 'Игрок';
+
+  const text = `${stars} ${userName} прошёл тест рабочей памяти!\n\n🧠 Уровень: ${lvlName} (${grid})\n📊 WMI: ${lastScore}/100\n⏱ Время: ${elapsed}с · Ходов: ${moves} · Ошибок: ${errors}\n\n🔬 Методика: тест рабочей памяти WMA\nПопробуй побить мой результат!`;
+
+  if (tg?.switchInlineQuery) {
+    // Открывает выбор чата для пересылки
+    tg.switchInlineQuery(text, ['users', 'groups', 'channels']);
+  } else if (tg?.sendData) {
+    tg.sendData(JSON.stringify({ action:'share', score:lastScore, level:lastLvl, moves, elapsed, errors }));
+  } else {
+    // Вне Telegram — копируем в буфер
+    navigator.clipboard?.writeText(text).then(() => alert('Скопировано в буфер обмена!'));
+  }
+}
+
+// ══════════════════════════════════════════════
+//  РЕЙТИНГ
+// ══════════════════════════════════════════════
+let currentLbTab = 0;
+
+async function showLeaderboard() {
+  document.getElementById('lbOverlay').classList.remove('hidden');
+  currentLbTab = 0;
+  document.querySelectorAll('.lb-tab').forEach((t,i) => t.classList.toggle('active', i===0));
+  await renderLb(0);
+}
+
+function closeLb() {
+  document.getElementById('lbOverlay').classList.add('hidden');
+}
+
+async function switchLbTab(lvl) {
+  currentLbTab = lvl;
+  document.querySelectorAll('.lb-tab').forEach((t,i) => t.classList.toggle('active', i===lvl));
+  document.getElementById('lbContent').innerHTML = '<div class="lb-loading">Загрузка…</div>';
+  await renderLb(lvl);
+}
+
+async function renderLb(lvl) {
+  const myId = tgUser?.id?.toString() || null;
+  const rows  = await (window.loadLeaderboard ? window.loadLeaderboard(lvl) : Promise.resolve([]));
+
+  if (!rows.length) {
+    document.getElementById('lbContent').innerHTML = '<div class="lb-empty">Пока нет результатов.<br>Сыграйте первым!</div>';
+    return;
+  }
+
+  const rankIcons = ['gold','silver','bronze'];
+  const html = rows.map((r, i) => {
+    const isMe   = myId && r.userId === myId;
+    const rank   = i < 3 ? rankIcons[i] : '';
+    const medal  = i===0?'🥇' : i===1?'🥈' : i===2?'🥉' : `${i+1}.`;
+    return `<div class="lb-row">
+      <div class="lb-rank ${rank}">${medal}</div>
+      <div>
+        <div class="lb-name ${isMe?'is-me':''}">${r.name}${isMe?' 👈':''}</div>
+        <div class="lb-detail">${r.moves} ходов · ${r.elapsed}с · ${r.errors} ошибок</div>
+      </div>
+      <div class="lb-score">${r.score}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('lbContent').innerHTML = html;
+}
+
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i=a.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function selectLevel(lvl) {
+  selectedLevel = lvl;
+  document.querySelectorAll('.level-btn').forEach((b,i) => b.classList.toggle('active', i===lvl));
+}
+
+function buildDeck(pairs) {
+  const chosen = shuffle(SYMBOLS).slice(0, pairs);
+  return shuffle([...chosen, ...chosen]);
+}
+
+function renderGrid(deck, cols) {
+  const grid = document.getElementById('grid');
+  grid.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+  grid.innerHTML = ''; cards = [];
+  deck.forEach(sym => {
+    const card = document.createElement('div');
+    card.className = 'card'; card.dataset.sym = sym;
+    card.innerHTML = `<div class="card-inner">
+      <div class="card-face card-back-face"></div>
+      <div class="card-face card-front-face">${sym}</div>
+    </div>`;
+    card.addEventListener('click', () => onCardClick(card));
+    grid.appendChild(card); cards.push(card);
+  });
+}
+
+function onCardClick(card) {
+  if (!gameActive || locked) return;
+  if (card.classList.contains('open') || card.classList.contains('matched')) return;
+  if (flipped.length === 2) return;
+
+  // Тактильный отклик при открытии (Telegram Haptic Feedback)
+  tg?.HapticFeedback?.selectionChanged();
+
+  card.classList.add('open'); flipped.push(card);
+
+  if (flipped.length === 2) {
+    moves++;
+    document.getElementById('movesVal').textContent = moves;
+    locked = true;
+
+    if (flipped[0].dataset.sym === flipped[1].dataset.sym) {
+      // Совпадение
+      setTimeout(() => {
+        flipped.forEach(c => { c.classList.add('matched'); c.classList.remove('open'); });
+        flipped = []; matched++; locked = false;
+        const total = LEVELS[selectedLevel].pairs;
+        document.getElementById('pairsVal').textContent = `${matched}/${total}`;
+        document.getElementById('progressBar').style.width = (matched/total*100)+'%';
+        tg?.HapticFeedback?.notificationOccurred('success');
+        if (matched === total) onWin();
+      }, 400);
+    } else {
+      // Ошибка
+      errors++;
+      const ev = document.getElementById('errorsVal');
+      ev.textContent = errors;
+      if (errors >= 2) ev.classList.add('has-errors');
+      tg?.HapticFeedback?.notificationOccurred('error');
+      setTimeout(() => {
+        flipped.forEach(c => { c.classList.add('wrong'); setTimeout(()=>c.classList.remove('wrong'),350); });
+      }, 150);
+      setTimeout(() => { flipped.forEach(c => c.classList.remove('open')); flipped=[]; locked=false; }, 850);
+    }
+  }
+}
+
+function startGame() {
+  document.getElementById('startOverlay').classList.add('hidden');
+  const lvl = LEVELS[selectedLevel];
+  document.getElementById('sessionBadge').textContent = lvl.tag;
+  document.getElementById('pairsVal').textContent = `0/${lvl.pairs}`;
+  matched=0; moves=0; errors=0; elapsed=0; flipped=[]; locked=false; gameActive=false;
+  clearInterval(timerInterval);
+  document.getElementById('movesVal').textContent = '0';
+  const ev = document.getElementById('errorsVal');
+  ev.textContent = '0'; ev.classList.remove('has-errors');
+  document.getElementById('timerVal').textContent = '0';
+  document.getElementById('timerVal').classList.remove('danger');
+  document.getElementById('progressBar').style.width = '0%';
+
+  const deck = buildDeck(lvl.pairs);
+  renderGrid(deck, lvl.cols);
+  cards.forEach(c => c.classList.add('open'));
+
+  const banner = document.getElementById('memoBanner');
+  const memoSec = document.getElementById('memoSec');
+  let sec = 10; memoSec.textContent = sec; banner.classList.add('visible');
+
+  const cd = setInterval(() => {
+    sec--;
+    if (sec <= 0) {
+      clearInterval(cd); banner.classList.remove('visible');
+      cards.forEach(c => c.classList.remove('open'));
+      gameActive = true;
+      timerInterval = setInterval(() => {
+        elapsed++;
+        document.getElementById('timerVal').textContent = elapsed;
+        if (elapsed > TIME_NORM[selectedLevel]) document.getElementById('timerVal').classList.add('danger');
+      }, 1000);
+    } else {
+      memoSec.textContent = sec;
+    }
+  }, 1000);
+}
+
+function calcScore(lvl, moves, elapsed, errors) {
+  const ideal     = IDEAL_MOVES[lvl];
+  const tn        = TIME_NORM[lvl];
+  const extra     = Math.max(0, moves - ideal);
+  const accScore  = Math.max(0, 100 - extra * 4);
+  const spdScore  = Math.max(0, 100 - Math.max(0, elapsed - tn) * 0.7);
+  const errPen    = errors * 3;
+  return Math.round(Math.max(0, Math.min(100, (accScore*0.55 + spdScore*0.45) - errPen)));
+}
+
+function onWin() {
+  gameActive = false; clearInterval(timerInterval);
+  tg?.HapticFeedback?.notificationOccurred('success');
+
+  const lvl   = selectedLevel;
+  const score = calcScore(lvl, moves, elapsed, errors);
+  lastScore = score; lastLvl = lvl;
+
+  const ideal = IDEAL_MOVES[lvl];
+  const tn    = TIME_NORM[lvl];
+  const pairs = LEVELS[lvl].pairs;
+
+  let icon, title;
+  if      (score >= 85) { icon='🏆'; title='Превосходная рабочая память'; }
+  else if (score >= 70) { icon='🥇'; title='Высокий уровень памяти'; }
+  else if (score >= 50) { icon='🥈'; title='Средний уровень памяти'; }
+  else                  { icon='🥉'; title='Есть ресурс для развития'; }
+
+  const descs = {
+    3: 'Ваш результат входит в верхний дециль. Объём рабочей памяти и скорость пространственного кодирования значительно превышают среднестатистические показатели. Вероятно, вы применяете мнемонические стратегии — группировку или образную визуализацию.',
+    2: 'Хороший результат с незначительными потерями точности или скорости. Рабочая память функционирует эффективно. Небольшая работа над стратегией запоминания позволит перейти в верхнюю группу.',
+    1: 'Результат соответствует среднестатистическим показателям. Объём рабочей памяти достаточен, однако скорость кодирования или точность извлечения нуждаются в тренировке. Прогресс появляется через 2–3 недели регулярных сессий.',
+    0: 'Рабочая память — один из наиболее пластичных когнитивных ресурсов. Усталость и отвлечение снижают результат. Попробуйте снова в спокойном состоянии, применяя ментальное «фотографирование» поля.'
+  };
+  const tier = score>=85?3 : score>=70?2 : score>=50?1 : 0;
+
+  const accuracy   = Math.round((ideal/moves)*100);
+  const speedLabel = elapsed<=tn*0.65?'Высокая' : elapsed<=tn?'Средняя' : 'Низкая';
+  const effLabel   = score>=80?'Отличная' : score>=60?'Хорошая' : score>=40?'Средняя' : 'Низкая';
+  const speedColor = elapsed<=tn*0.65?'var(--accent2)' : elapsed<=tn?'var(--accent3)' : 'var(--danger)';
+  const accColor   = accuracy>=85?'var(--accent2)' : accuracy>=65?'var(--accent3)' : 'var(--danger)';
+  const effColor   = score>=70?'var(--accent2)' : score>=50?'var(--accent3)' : 'var(--muted2)';
+
+  const allTips = [
+    { cond: errors > pairs*0.3,  t: 'Высокий процент ошибок указывает на быстрое затухание следа памяти. После каждой неудачи мысленно восстанавливайте всё поле — это укрепляет след.' },
+    { cond: elapsed > tn,         t: 'Медленное извлечение говорит о неустойчивом следе памяти. Делите поле на квадранты и запоминайте блоками, а не отдельными парами.' },
+    { cond: moves > ideal*1.7,    t: 'Большое число ходов означает неполное кодирование. Во время фазы запоминания проговаривайте позиции вслух или создавайте визуальные маршруты.' },
+    { cond: score>=70 && lvl<2,   t: 'Для развития рабочей памяти важно прогрессивное увеличение нагрузки. Следующий уровень сложности — оптимальный следующий шаг.' },
+    { cond: true,                  t: 'Оптимальный режим тренировки: 15–20 минут 4–5 раз в неделю. Эффект накапливается в течение 3–4 недель при регулярных сессиях.' },
+  ];
+  const tips = allTips.filter(x => x.cond).slice(0,3).map(x => x.t);
+
+  // История
+  const prevScores = history.filter(h => h.lvl===lvl).map(h => h.score);
+  const prevBest   = prevScores.length ? Math.max(...prevScores) : null;
+  const isNewBest  = prevBest===null || score > prevBest;
+  history.push({ lvl, score, moves, elapsed, errors });
+  if (history.length > 40) history = history.slice(-40);
+  saveHistory();
+
+  // Сохраняем в Firebase рейтинг
+  if (window.saveScore) {
+    const userName = tgUser
+      ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ') || tgUser.username || 'Аноним'
+      : 'Аноним';
+    window.saveScore({
+      userId:    tgUser?.id?.toString() || 'anon_' + Date.now(),
+      name:      userName,
+      username:  tgUser?.username || '',
+      level:     lvl,
+      score,
+      moves,
+      elapsed,
+      errors,
+      createdAt: Date.now()
+    });
+  }
+
+  // DOM
+  document.getElementById('resIcon').textContent   = icon;
+  document.getElementById('resTitle').textContent  = title;
+  document.getElementById('resLevel').textContent  = `${LEVELS[lvl].tag} · ${LEVELS[lvl].name}`;
+  document.getElementById('scoreVal').textContent  = score;
+  document.getElementById('scoreDesc').textContent = descs[tier];
+  document.getElementById('pTime').textContent     = `${elapsed} сек`;
+  document.getElementById('pAccuracy').innerHTML   = `<span style="color:${accColor}">${accuracy}%</span>`;
+  document.getElementById('pSpeed').innerHTML      = `<span style="color:${speedColor}">${speedLabel}</span>`;
+  document.getElementById('pEff').innerHTML        = `<span style="color:${effColor}">${effLabel}</span>`;
+  document.getElementById('tipsList').innerHTML    = tips.map(t=>`<div class="tip">${t}</div>`).join('');
+
+  const lvlHist   = history.filter(h => h.lvl===lvl).slice(-6).reverse();
+  const bestScore = Math.max(...lvlHist.map(h => h.score));
+  document.getElementById('historyList').innerHTML = lvlHist.map((h,i) => {
+    const isCurrent = i===0, isBest = h.score===bestScore;
+    const col = h.score>=70?'var(--accent2)' : h.score>=50?'var(--accent3)' : 'var(--muted2)';
+    return `<div class="history-row">
+      <span class="history-lvl">${h.moves} ходов · ${h.elapsed}с · ${h.errors} ошибок</span>
+      <span>
+        <span class="history-score" style="color:${col}">${h.score}</span>
+        ${isBest&&lvlHist.length>1?'<span class="badge-new">★</span>':''}
+        ${isCurrent&&isNewBest&&lvlHist.length>1?'<span class="badge-new">↑ рекорд</span>':''}
+      </span>
+    </div>`;
+  }).join('');
+
+  const barColor = score>=70
+    ? 'linear-gradient(90deg,var(--accent),var(--accent2))'
+    : score>=50
+    ? 'linear-gradient(90deg,var(--accent3),var(--accent2))'
+    : 'linear-gradient(90deg,var(--danger),var(--accent3))';
+  document.getElementById('scoreBar').style.background = barColor;
+
+  setTimeout(() => {
+    document.getElementById('winOverlay').classList.remove('hidden');
+    setTimeout(() => { document.getElementById('scoreBar').style.width = score+'%'; }, 200);
+  }, 600);
+}
+
+function backToMenu() {
+  document.getElementById('winOverlay').classList.add('hidden');
+  document.getElementById('scoreBar').style.width = '0%';
+  document.getElementById('grid').innerHTML = '';
+  document.getElementById('startOverlay').classList.remove('hidden');
+}
+
+function restartSameLevel() {
+  document.getElementById('winOverlay').classList.add('hidden');
+  document.getElementById('scoreBar').style.width = '0%';
+  startGame();
+}
+</script>
+</body>
+</html>
