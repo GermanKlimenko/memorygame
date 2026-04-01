@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Аренда яхт — Анализ рынка и архитектура решения</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0d1b2a;
+    --sea: #0a4f6e;
+    --sea-mid: #1a7a9e;
+    --sea-light: #c8e8f2;
+    --sand: #f5efe6;
+    --sand-dark: #e8ddd0;
+    --gold: #b8924a;
+    --gold-light: #f0d9b0;
+    --text: #1e2d3d;
+    --text-muted: #5a6f82;
+    --white: #ffffff;
+    --danger: #c0392b;
+    --success: #1a6b4a;
+    --warn: #8a5e1a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--sand);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* ── COVER ── */
+  .cover {
+    background: var(--ink);
+    color: var(--white);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 64px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 70% 120%, rgba(10,79,110,0.55) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 20% -10%, rgba(26,122,158,0.25) 0%, transparent 55%);
+    pointer-events: none;
+  }
+
+  .cover-wave {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 200px;
+    overflow: hidden;
+    opacity: 0.08;
+  }
+
+  .cover-wave svg { width: 100%; height: 100%; }
+
+  .cover-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+  }
+
+  .cover-tag {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.45);
+    border: 1px solid rgba(255,255,255,0.12);
+    padding: 6px 14px;
+    border-radius: 2px;
+  }
+
+  .cover-date {
+    font-size: 12px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 0.1em;
+  }
+
+  .cover-main {
+    position: relative;
+    z-index: 1;
+  }
+
+  .cover-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 24px;
+    font-weight: 400;
+  }
+
+  .cover-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(42px, 6vw, 76px);
+    line-height: 1.08;
+    font-weight: 400;
+    margin-bottom: 28px;
+    max-width: 700px;
+  }
+
+  .cover-title em {
+    font-style: italic;
+    color: var(--sea-mid);
+  }
+
+  .cover-desc {
+    font-size: 16px;
+    color: rgba(255,255,255,0.55);
+    max-width: 520px;
+    line-height: 1.75;
+    font-weight: 300;
+  }
+
+  .cover-bottom {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    position: relative;
+    z-index: 1;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 32px;
+  }
+
+  .cover-stat { text-align: center; }
+  .cover-stat-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--white);
+    display: block;
+  }
+  .cover-stat-lbl {
+    font-size: 11px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .cover-divider {
+    width: 1px;
+    height: 48px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  /* ── LAYOUT ── */
+  .page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 48px 80px;
+  }
+
+  /* ── SECTION ── */
+  .section {
+    padding: 80px 0 0;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 48px;
+    border-bottom: 1px solid var(--sand-dark);
+    padding-bottom: 24px;
+  }
+
+  .section-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 72px;
+    color: var(--sand-dark);
+    line-height: 1;
+    font-weight: 400;
+    flex-shrink: 0;
+    margin-bottom: -8px;
+  }
+
+  .section-meta {}
+  .section-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 32px;
+    font-weight: 400;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+
+  /* ── METRIC ROW ── */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    margin-bottom: 40px;
+    background: var(--sand-dark);
+    border: 1px solid var(--sand-dark);
+    overflow: hidden;
+    border-radius: 4px;
+  }
+
+  .metric-box {
+    background: var(--white);
+    padding: 28px 24px;
+    text-align: center;
+  }
+
+  .metric-box-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 36px;
+    color: var(--sea);
+    font-weight: 600;
+    display: block;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+
+  .metric-box-lbl {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.4;
+    max-width: 120px;
+    margin: 0 auto;
+  }
+
+  /* ── SEGMENTS GRID ── */
+  .segments {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+
+  .segment-card {
+    background: var(--white);
+    border: 1px solid var(--sand-dark);
+    padding: 24px;
+    border-radius: 4px;
+    border-left: 3px solid var(--sea);
+    transition: border-color .2s, transform .2s;
+  }
+
+  .segment-card:hover {
+    border-left-color: var(--gold);
+    transform: translateY(-2px);
+  }
+
+  .segment-card:nth-child(2) { border-left-color: var(--sea-mid); }
+  .segment-card:nth-child(3) { border-left-color: var(--gold); }
+  .segment-card:nth-child(4) { border-left-color: var(--text-muted); }
+
+  .segment-title {
+    font-weight: 500;
+    font-size: 15px;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+
+  .segment-check {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+
+  .segment-price {
+    display: inline-block;
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--sea);
+    font-weight: 600;
+  }
+
+  /* ── COMPETITOR BOX ── */
+  .competitor-box {
+    background: var(--ink);
+    color: var(--white);
+    padding: 36px 40px;
+    border-radius: 4px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+  }
+
+  .comp-col-title {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.35);
+    margin-bottom: 20px;
+    font-weight: 400;
+  }
+
+  .comp-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: rgba(255,255,255,0.7);
+  }
+
+  .comp-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .comp-dot.bad { background: rgba(192,57,43,0.25); color: #e87c6d; }
+  .comp-dot.good { background: rgba(26,107,74,0.35); color: #4ecba0; }
+
+  /* ── PAIN CARDS ── */
+  .pain-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .pain-card {
+    background: var(--white);
+    border: 1px solid var(--sand-dark);
+    border-radius: 4px;
+    padding: 22px 24px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    transition: box-shadow .2s;
+  }
+
+  .pain-card:hover {
+    box-shadow: 0 4px 20px rgba(13,27,42,0.06);
+  }
+
+  .pain-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .pain-icon.r { background: #fde8e6; }
+  .pain-icon.a { background: var(--gold-light); }
+  .pain-icon.b { background: var(--sea-light); }
+
+  .pain-card-title {
+    font-weight: 500;
+    font-size: 14px;
+    margin-bottom: 4px;
+    color: var(--ink);
+  }
+
+  .pain-card-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.55;
+  }
+
+  /* ── SOLUTION BOX ── */
+  .solution-intro {
+    background: linear-gradient(135deg, var(--sea) 0%, #0d3b50 100%);
+    color: var(--white);
+    padding: 48px;
+    border-radius: 4px;
+    margin-bottom: 40px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .solution-intro::after {
+    content: '⛵';
+    position: absolute;
+    right: 40px;
+    bottom: 20px;
+    font-size: 120px;
+    opacity: 0.05;
+  }
+
+  .solution-intro-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    margin-bottom: 12px;
+    font-weight: 400;
+  }
+
+  .solution-intro-desc {
+    font-size: 15px;
+    color: rgba(255,255,255,0.65);
+    max-width: 600px;
+    line-height: 1.7;
+  }
+
+  /* ── SITE SECTIONS ── */
+  .site-sections {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+    background: var(--sand-dark);
+    overflow: hidden;
+    border-radius: 4px;
+    margin-bottom: 40px;
+  }
+
+  .site-sec {
+    background: var(--white);
+    padding: 24px 18px;
+    text-align: center;
+  }
+
+  .site-sec-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    color: var(--sea-light);
+    font-weight: 600;
+    display: block;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+
+  .site-sec-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .site-sec-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ── BOT FLOW ── */
+  .bot-flow {
+    display: flex;
+    gap: 0;
+    margin-bottom: 40px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .bot-step {
+    flex: 1;
+    min-width: 150px;
+    background: var(--white);
+    border: 1px solid var(--sand-dark);
+    padding: 20px 16px;
+    position: relative;
+    text-align: center;
+  }
+
+  .bot-step:not(:last-child)::after {
+    content: '→';
+    position: absolute;
+    right: -14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gold);
+    font-size: 18px;
+    z-index: 1;
+  }
+
+  .bot-step:first-child { border-radius: 4px 0 0 4px; }
+  .bot-step:last-child { border-radius: 0 4px 4px 0; }
+
+  .bot-step-icon {
+    font-size: 24px;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .bot-step-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .bot-step-desc {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ── TELEGRAM MOCKUP ── */
+  .tg-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 40px;
+    align-items: start;
+    margin-bottom: 40px;
+  }
+
+  .tg-scenarios {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .tg-sc {
+    background: var(--white);
+    border: 1px solid var(--sand-dark);
+    border-radius: 4px;
+    padding: 16px;
+  }
+
+  .tg-sc-title {
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+
+  .tg-sc-desc {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .tg-phone {
+    background: #1c2733;
+    border-radius: 24px;
+    padding: 16px;
+    box-shadow: 0 20px 60px rgba(13,27,42,0.2);
+  }
+
+  .tg-phone-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    margin-bottom: 12px;
+  }
+
+  .tg-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #2481cc;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; color: #fff; flex-shrink: 0;
+  }
+
+  .tg-phone-name {
+    font-size: 13px; font-weight: 500; color: #fff;
+  }
+
+  .tg-phone-status {
+    font-size: 11px; color: rgba(255,255,255,0.4);
+  }
+
+  .tg-msg-row {
+    margin: 4px 0 8px;
+    clear: both;
+  }
+
+  .tg-bubble {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.5;
+    max-width: 86%;
+  }
+
+  .from-bot {
+    background: #2b5278;
+    color: #e8f4ff;
+    border-bottom-left-radius: 4px;
+  }
+
+  .from-user {
+    background: #2481cc;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    float: right;
+  }
+
+  .tg-buttons {
+    display: flex; gap: 6px; flex-wrap: wrap; padding: 2px 0 6px; clear: both;
+  }
+
+  .tg-btn-pill {
+    background: rgba(36,129,204,0.18);
+    color: #5ba3e0;
+    border: 1px solid rgba(36,129,204,0.25);
+    border-radius: 8px;
+    padding: 5px 10px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  /* ── TECH STACK ── */
+  .tech-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--white);
+    border: 1px solid var(--sand-dark);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 40px;
+  }
+
+  .tech-table th {
+    background: var(--ink);
+    color: rgba(255,255,255,0.55);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 400;
+    padding: 12px 20px;
+    text-align: left;
+  }
+
+  .tech-table td {
+    padding: 14px 20px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--sand-dark);
+    vertical-align: top;
+  }
+
+  .tech-table tr:last-child td { border-bottom: none; }
+  .tech-table tr:hover td { background: var(--sand); }
+
+  .tech-layer {
+    font-weight: 500;
+    color: var(--sea);
+    font-size: 13px;
+  }
+
+  .tech-tool {
+    font-family: 'DM Sans', monospace;
+    background: var(--sand);
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    display: inline-block;
+    margin-right: 4px;
+    color: var(--ink);
+    border: 1px solid var(--sand-dark);
+  }
+
+  /* ── ROADMAP ── */
+  .roadmap {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    background: var(--sand-dark);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 40px;
+  }
+
+  .roadmap-phase {
+    background: var(--white);
+    padding: 28px 22px;
+    border-right: 1px solid var(--sand-dark);
+    position: relative;
+  }
+
+  .roadmap-phase:last-child { border-right: none; }
+
+  .phase-tag {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 2px;
+    display: inline-block;
+    margin-bottom: 12px;
+  }
+
+  .phase-tag.p1 { background: #e8f5ee; color: var(--success); }
+  .phase-tag.p2 { background: var(--sea-light); color: var(--sea); }
+  .phase-tag.p3 { background: var(--gold-light); color: var(--warn); }
+  .phase-tag.p4 { background: var(--sand); color: var(--text-muted); border: 1px solid var(--sand-dark); }
+
+  .phase-timeline {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+
+  .phase-tasks {
+    list-style: none;
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+  }
+
+  .phase-tasks li::before {
+    content: '—  ';
+    color: var(--sand-dark);
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    background: var(--ink);
+    color: rgba(255,255,255,0.35);
+    padding: 40px 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    margin-top: 80px;
+    letter-spacing: 0.05em;
+  }
+
+  .footer-brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: rgba(255,255,255,0.7);
+    font-style: italic;
+  }
+
+  /* ── PRINT ── */
+  @media print {
+    .cover { min-height: auto; padding: 40px; }
+    .cover::before { display: none; }
+    .page { padding: 0 40px 40px; }
+  }
+
+  @media (max-width: 768px) {
+    .cover { padding: 40px 28px; }
+    .page { padding: 0 20px 60px; }
+    .metrics { grid-template-columns: 1fr 1fr; }
+    .segments { grid-template-columns: 1fr; }
+    .pain-grid { grid-template-columns: 1fr; }
+    .competitor-box { grid-template-columns: 1fr; }
+    .site-sections { grid-template-columns: 1fr 1fr; }
+    .tg-wrapper { grid-template-columns: 1fr; }
+    .roadmap { grid-template-columns: 1fr 1fr; }
+    .cover-bottom { flex-wrap: wrap; gap: 20px; }
+    .tech-table { font-size: 13px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ COVER ═══ -->
+<div class="cover">
+  <div class="cover-top">
+    <div class="cover-tag">Анализ рынка · Архитектура решения</div>
+    <div class="cover-date">2025</div>
+  </div>
+
+  <div class="cover-main">
+    <div class="cover-eyebrow">Яхтенный чартер</div>
+    <h1 class="cover-title">Мини-сайт &amp;<br><em>Telegram-бот</em><br>для аренды яхт</h1>
+    <p class="cover-desc">Анализ рынка, болевые точки, архитектура цифрового продукта и дорожная карта разработки для компании яхтенного чартера.</p>
+  </div>
+
+  <div class="cover-bottom">
+    <div class="cover-stat">
+      <span class="cover-stat-val">$12B+</span>
+      <span class="cover-stat-lbl">Мировой рынок чартера</span>
+    </div>
+    <div class="cover-divider"></div>
+    <div class="cover-stat">
+      <span class="cover-stat-val">+8%</span>
+      <span class="cover-stat-lbl">Рост в год (CAGR)</span>
+    </div>
+    <div class="cover-divider"></div>
+    <div class="cover-stat">
+      <span class="cover-stat-val">~70%</span>
+      <span class="cover-stat-lbl">Бронируют онлайн</span>
+    </div>
+    <div class="cover-divider"></div>
+    <div class="cover-stat">
+      <span class="cover-stat-val">&lt;3 мин</span>
+      <span class="cover-stat-lbl">Ожидаемый ответ</span>
+    </div>
+  </div>
+
+  <div class="cover-wave">
+    <svg viewBox="0 0 1440 200" preserveAspectRatio="none">
+      <path d="M0,100 C180,60 360,140 540,100 C720,60 900,140 1080,100 C1260,60 1380,110 1440,90 L1440,200 L0,200 Z" fill="white"/>
+      <path d="M0,130 C200,90 400,160 600,130 C800,100 1000,160 1200,130 C1350,110 1420,140 1440,125 L1440,200 L0,200 Z" fill="white" opacity="0.5"/>
+    </svg>
+  </div>
+</div>
+
+<div class="page">
+
+  <!-- ═══ SECTION 1: РЫНОК ═══ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">01</div>
+      <div class="section-meta">
+        <div class="section-eyebrow">Контекст</div>
+        <h2 class="section-title">Структура рынка</h2>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric-box">
+        <span class="metric-box-val">$12B+</span>
+        <div class="metric-box-lbl">Объём мирового рынка яхтенного чартера</div>
+      </div>
+      <div class="metric-box">
+        <span class="metric-box-val">+8%</span>
+        <div class="metric-box-lbl">Среднегодовой рост (CAGR)</div>
+      </div>
+      <div class="metric-box">
+        <span class="metric-box-val">~70%</span>
+        <div class="metric-box-lbl">Клиентов выбирают яхту онлайн</div>
+      </div>
+      <div class="metric-box">
+        <span class="metric-box-val">20–30%</span>
+        <div class="metric-box-lbl">Комиссия агрегаторов (GetMyBoat, Click&Boat)</div>
+      </div>
+    </div>
+
+    <div class="segments">
+      <div class="segment-card">
+        <div class="segment-title">Дневная аренда</div>
+        <div class="segment-check">Прогулки, рыбалка, отдых · Самый массовый сегмент</div>
+        <span class="segment-price">$300–800 /день</span>
+      </div>
+      <div class="segment-card">
+        <div class="segment-title">Недельный чартер</div>
+        <div class="segment-check">Маршруты по островам · Платёжеспособная аудитория</div>
+        <span class="segment-price">$3 000–15 000 /нед</span>
+      </div>
+      <div class="segment-card">
+        <div class="segment-title">Корпоративы и события</div>
+        <div class="segment-check">Вечеринки, свадьбы, тимбилдинг · Высокий чек</div>
+        <span class="segment-price">от $1 500</span>
+      </div>
+      <div class="segment-card">
+        <div class="segment-title">Постоянные клиенты</div>
+        <div class="segment-check">Абонементы и лояльность · Повторные продажи</div>
+        <span class="segment-price">−15–20% скидка</span>
+      </div>
+    </div>
+
+    <div class="competitor-box">
+      <div>
+        <div class="comp-col-title">Как работают конкуренты сейчас</div>
+        <div class="comp-item"><div class="comp-dot bad">✕</div>Устаревшие сайты без мобильной адаптации</div>
+        <div class="comp-item"><div class="comp-dot bad">✕</div>Форма «Позвоните нам» вместо онлайн-брони</div>
+        <div class="comp-item"><div class="comp-dot bad">✕</div>Нет публичных цен — «уточняйте у менеджера»</div>
+        <div class="comp-item"><div class="comp-dot bad">✕</div>Нет мессенджеров и чат-каналов</div>
+        <div class="comp-item"><div class="comp-dot bad">✕</div>Зависимость от агрегаторов (−20–30% маржи)</div>
+      </div>
+      <div>
+        <div class="comp-col-title">Окно возможностей</div>
+        <div class="comp-item"><div class="comp-dot good">✓</div>Мгновенный ответ = конкурентное преимущество</div>
+        <div class="comp-item"><div class="comp-dot good">✓</div>Прозрачная цена снижает порог входа</div>
+        <div class="comp-item"><div class="comp-dot good">✓</div>Telegram охватывает аудиторию в любое время</div>
+        <div class="comp-item"><div class="comp-dot good">✓</div>Прямой канал освобождает от комиссий</div>
+        <div class="comp-item"><div class="comp-dot good">✓</div>Онлайн-депозит фиксирует клиента</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION 2: БОЛИ ═══ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">02</div>
+      <div class="section-meta">
+        <div class="section-eyebrow">Исследование</div>
+        <h2 class="section-title">Болевые точки</h2>
+      </div>
+    </div>
+
+    <p style="margin-bottom: 32px; color: var(--text-muted); max-width: 640px;">
+      Проблемы делятся на две группы: боли клиента, который хочет арендовать яхту, и боли владельца / менеджера флота.
+    </p>
+
+    <div style="font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; font-weight: 500;">Боли клиента</div>
+
+    <div class="pain-grid" style="margin-bottom: 32px;">
+      <div class="pain-card">
+        <div class="pain-icon r">⏱</div>
+        <div>
+          <div class="pain-card-title">Долго ждать ответа</div>
+          <div class="pain-card-desc">Клиент оставляет заявку — ждёт часами. За это время он уходит к конкуренту или теряет интерес.</div>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon r">❓</div>
+        <div>
+          <div class="pain-card-title">Нет ясности по цене</div>
+          <div class="pain-card-desc">«Цена зависит от сезона» — непрозрачность отталкивает. Клиент хочет видеть стоимость сразу, как в Airbnb.</div>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon a">📅</div>
+        <div>
+          <div class="pain-card-title">Неизвестна доступность</div>
+          <div class="pain-card-desc">Нельзя проверить онлайн, свободна ли яхта. Приходится звонить — а звонить не хочется.</div>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon a">📱</div>
+        <div>
+          <div class="pain-card-title">Неудобно на телефоне</div>
+          <div class="pain-card-desc">Большинство ищут яхту с мобильного, но сайты не адаптированы. Маленькие кнопки, горизонтальный скролл.</div>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon b">🤝</div>
+        <div>
+          <div class="pain-card-title">Страх обмана</div>
+          <div class="pain-card-desc">Клиент не знает компанию. Нужны отзывы, документы, страховка, гарантии возврата депозита.</div>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon b">🌐</div>
+        <div>
+          <div class="pain-card-title">Языковой барьер</div>
+          <div class="pain-card-desc">Туристы не говорят на местном языке. Бот с мультиязычностью снимает этот барьер без доп. затрат.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--sea); margin-bottom: 16px; font-weight: 500;">Боли владельца / менеджера флота</div>
+
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="pain-icon a">📋</div>
+        <div>
+          <div class="pain-card-title">Ручное расписание</div>
+          <div class="pain-card-desc">Брони ведут в таблицах или на бумаге. Риск «двойного бронирования» — дорогостоящий конфликт.</div>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon r">💸</div>
+        <div>
+          <div class="pain-card-title">Комиссия агрегаторов</div>
+          <div class="pain-card-desc">GetMyBoat и Click&Boat берут 20–30%. Прямой цифровой канал даёт независимость и маржу обратно.</div>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon b">📊</div>
+        <div>
+          <div class="pain-card-title">Нет аналитики</div>
+          <div class="pain-card-desc">Непонятно, откуда приходят клиенты, какие яхты популярны и в какие дни пик спроса.</div>
+        </div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-icon a">🔁</div>
+        <div>
+          <div class="pain-card-title">Нет повторных продаж</div>
+          <div class="pain-card-desc">Клиент пришёл один раз и исчез. Нет инструмента напоминаний, программы лояльности, реактивации.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION 3: МИНИ-САЙТ ═══ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">03</div>
+      <div class="section-meta">
+        <div class="section-eyebrow">Решение · Часть 1</div>
+        <h2 class="section-title">Мини-сайт</h2>
+      </div>
+    </div>
+
+    <div class="solution-intro">
+      <div class="solution-intro-title">Принцип: ответь на 3 вопроса за 10 секунд</div>
+      <p class="solution-intro-desc">«Что есть?» «Сколько стоит?» «Как забронировать?» — посетитель не должен скролить или искать. Всё на первом экране. Сайт — это воронка, а не брошюра.</p>
+    </div>
+
+    <div class="site-sections">
+      <div class="site-sec">
+        <span class="site-sec-num">01</span>
+        <div class="site-sec-title">Hero + поиск</div>
+        <div class="site-sec-desc">Красивый баннер. Три поля: дата, кол-во человек, тип. Кнопка «Показать яхты». Сразу в деле.</div>
+      </div>
+      <div class="site-sec">
+        <span class="site-sec-num">02</span>
+        <div class="site-sec-title">Каталог яхт</div>
+        <div class="site-sec-desc">Фото, название, вместимость, цена/день, рейтинг. Быстрый фильтр по типу.</div>
+      </div>
+      <div class="site-sec">
+        <span class="site-sec-num">03</span>
+        <div class="site-sec-title">Как это работает</div>
+        <div class="site-sec-desc">3 шага: выбери → подтверди → оплати депозит. Убирает страх неизвестности.</div>
+      </div>
+      <div class="site-sec">
+        <span class="site-sec-num">04</span>
+        <div class="site-sec-title">Отзывы + доверие</div>
+        <div class="site-sec-desc">Google/TripAdvisor отзывы, лицензии, страховка, год работы компании.</div>
+      </div>
+      <div class="site-sec">
+        <span class="site-sec-num">05</span>
+        <div class="site-sec-title">CTA → Telegram</div>
+        <div class="site-sec-desc">Плавающая кнопка и финальный блок: «Напишем в Telegram — ответим за 2 минуты».</div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <div style="background: var(--white); border: 1px solid var(--sand-dark); border-radius: 4px; padding: 24px;">
+        <div style="font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; font-weight: 500;">SEO и трафик</div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.8;">
+          · Страницы под каждую яхту и маршрут<br>
+          · Блог: «Лучшие яхты для 10 человек», «Рыбалка в июле»<br>
+          · Google Business Profile обязателен<br>
+          · Schema.org разметка — звёздочки в выдаче
+        </div>
+      </div>
+      <div style="background: var(--white); border: 1px solid var(--sand-dark); border-radius: 4px; padding: 24px;">
+        <div style="font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; font-weight: 500;">Конверсионные элементы</div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.8;">
+          · Счётчик «осталось 2 яхты на эти даты»<br>
+          · Онлайн-депозит через Stripe / ЮKassa<br>
+          · WhatsApp / Telegram кнопки на каждой карточке<br>
+          · Калькулятор стоимости чартера
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION 4: TELEGRAM БОТ ═══ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">04</div>
+      <div class="section-meta">
+        <div class="section-eyebrow">Решение · Часть 2</div>
+        <h2 class="section-title">Telegram-бот</h2>
+      </div>
+    </div>
+
+    <div class="bot-flow">
+      <div class="bot-step">
+        <span class="bot-step-icon">👋</span>
+        <div class="bot-step-title">/start</div>
+        <div class="bot-step-desc">Приветствие, выбор языка, главное меню</div>
+      </div>
+      <div class="bot-step">
+        <span class="bot-step-icon">📅</span>
+        <div class="bot-step-title">Дата</div>
+        <div class="bot-step-desc">Выбор даты через инлайн-календарь</div>
+      </div>
+      <div class="bot-step">
+        <span class="bot-step-icon">👥</span>
+        <div class="bot-step-title">Гости</div>
+        <div class="bot-step-desc">Кол-во человек (быстрые кнопки)</div>
+      </div>
+      <div class="bot-step">
+        <span class="bot-step-icon">⛵</span>
+        <div class="bot-step-title">Яхты</div>
+        <div class="bot-step-desc">Список свободных яхт с ценами</div>
+      </div>
+      <div class="bot-step">
+        <span class="bot-step-icon">💳</span>
+        <div class="bot-step-title">Бронь</div>
+        <div class="bot-step-desc">Контакт → депозит → подтверждение</div>
+      </div>
+    </div>
+
+    <div class="tg-wrapper">
+      <div>
+        <div style="font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; font-weight: 500;">Сценарии бота</div>
+        <div class="tg-scenarios">
+          <div class="tg-sc">
+            <div class="tg-sc-title">🔍 Подбор яхты</div>
+            <div class="tg-sc-desc">Дата → Гости → Тип → Список вариантов с ценами и фото</div>
+          </div>
+          <div class="tg-sc">
+            <div class="tg-sc-title">📋 Бронирование</div>
+            <div class="tg-sc-desc">Выбор яхты → Контакт → Ссылка на оплату депозита</div>
+          </div>
+          <div class="tg-sc">
+            <div class="tg-sc-title">📌 Мои брони</div>
+            <div class="tg-sc-desc">Детали брони, напоминание за 24 часа, отмена</div>
+          </div>
+          <div class="tg-sc">
+            <div class="tg-sc-title">❓ FAQ</div>
+            <div class="tg-sc-desc">Что взять, правила, документы, отмена, страховка</div>
+          </div>
+          <div class="tg-sc">
+            <div class="tg-sc-title">💬 Менеджер</div>
+            <div class="tg-sc-desc">Кнопка «Написать менеджеру» в любой момент диалога</div>
+          </div>
+          <div class="tg-sc">
+            <div class="tg-sc-title">🎁 Акции</div>
+            <div class="tg-sc-desc">Рассылка спецпредложений по базе клиентов в боте</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; font-weight: 500;">Демо диалога</div>
+        <div class="tg-phone">
+          <div class="tg-phone-header">
+            <div class="tg-avatar">⛵</div>
+            <div>
+              <div class="tg-phone-name">YachtBot</div>
+              <div class="tg-phone-status">онлайн</div>
+            </div>
+          </div>
+          <div class="tg-msg-row">
+            <div class="tg-bubble from-bot">Привет! Я помогу подобрать яхту 🛥<br>Когда планируете выход?</div>
+          </div>
+          <div class="tg-buttons">
+            <div class="tg-btn-pill">Сегодня</div>
+            <div class="tg-btn-pill">Завтра</div>
+            <div class="tg-btn-pill">Выбрать дату</div>
+          </div>
+          <div class="tg-msg-row">
+            <div class="tg-bubble from-user">Завтра</div>
+          </div>
+          <div class="tg-msg-row">
+            <div class="tg-bubble from-bot">Отлично! Сколько человек?</div>
+          </div>
+          <div class="tg-buttons">
+            <div class="tg-btn-pill">1–4</div>
+            <div class="tg-btn-pill">5–10</div>
+            <div class="tg-btn-pill">10–20</div>
+          </div>
+          <div class="tg-msg-row">
+            <div class="tg-bubble from-user">5–10</div>
+          </div>
+          <div class="tg-msg-row">
+            <div class="tg-bubble from-bot">Нашёл 3 яхты на завтра 🎉<br><br><b>Sea Dream</b> — от $420/день<br><b>Blue Horizon</b> — от $550/день<br><b>Poseidon</b> — от $390/день</div>
+          </div>
+          <div class="tg-buttons">
+            <div class="tg-btn-pill">Подробнее</div>
+            <div class="tg-btn-pill">Забронировать</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION 5: ТЕХНОЛОГИИ ═══ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">05</div>
+      <div class="section-meta">
+        <div class="section-eyebrow">Разработка</div>
+        <h2 class="section-title">Технический стек</h2>
+      </div>
+    </div>
+
+    <table class="tech-table">
+      <thead>
+        <tr>
+          <th style="width: 140px;">Слой</th>
+          <th style="width: 220px;">Технология</th>
+          <th>Обоснование</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="tech-layer">Сайт (frontend)</td>
+          <td><span class="tech-tool">Next.js</span> <span class="tech-tool">React</span></td>
+          <td style="color: var(--text-muted);">SEO из коробки (SSR/SSG), быстрый деплой на Vercel, большая экосистема</td>
+        </tr>
+        <tr>
+          <td class="tech-layer">Стили</td>
+          <td><span class="tech-tool">Tailwind CSS</span></td>
+          <td style="color: var(--text-muted);">Адаптив без усилий, быстрая вёрстка, консистентный дизайн</td>
+        </tr>
+        <tr>
+          <td class="tech-layer">Telegram-бот</td>
+          <td><span class="tech-tool">Python</span> <span class="tech-tool">aiogram 3</span></td>
+          <td style="color: var(--text-muted);">Асинхронный, удобные FSM-сценарии, большое сообщество</td>
+        </tr>
+        <tr>
+          <td class="tech-layer">База данных</td>
+          <td><span class="tech-tool">PostgreSQL</span> <span class="tech-tool">Supabase</span></td>
+          <td style="color: var(--text-muted);">Бесплатный tier, REST API из коробки, Realtime-подписки</td>
+        </tr>
+        <tr>
+          <td class="tech-layer">Оплата</td>
+          <td><span class="tech-tool">Stripe</span> <span class="tech-tool">ЮKassa</span></td>
+          <td style="color: var(--text-muted);">Депозит онлайн — клиент зафиксирован, остаток принимается на месте</td>
+        </tr>
+        <tr>
+          <td class="tech-layer">Хостинг бота</td>
+          <td><span class="tech-tool">Railway</span></td>
+          <td style="color: var(--text-muted);">$5–10/мес, деплой из GitHub, авто-рестарт при сбоях</td>
+        </tr>
+        <tr>
+          <td class="tech-layer">Уведомления</td>
+          <td><span class="tech-tool">Telegram Bot API</span></td>
+          <td style="color: var(--text-muted);">Напоминания за 24ч, подтверждения брони, статусы — бесплатно</td>
+        </tr>
+        <tr>
+          <td class="tech-layer">Аналитика</td>
+          <td><span class="tech-tool">PostHog</span> <span class="tech-tool">GA4</span></td>
+          <td style="color: var(--text-muted);">PostHog — product analytics + heatmaps, GA4 — SEO и источники трафика</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="background: var(--white); border: 1px solid var(--sand-dark); border-radius: 4px; padding: 28px; margin-bottom: 40px;">
+      <div style="font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 16px; font-weight: 500;">Схема взаимодействия компонентов</div>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px;">
+        <div style="background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 4px;">Клиент</div>
+        <div style="color: var(--gold);">→</div>
+        <div style="border: 1px solid var(--sea); color: var(--sea); padding: 10px 16px; border-radius: 4px;">Next.js сайт</div>
+        <div style="color: var(--gold);">↔</div>
+        <div style="border: 1px solid var(--sea); color: var(--sea); padding: 10px 16px; border-radius: 4px;">Supabase (PostgreSQL)</div>
+        <div style="color: var(--gold);">↔</div>
+        <div style="border: 1px solid var(--sea); color: var(--sea); padding: 10px 16px; border-radius: 4px;">aiogram бот</div>
+        <div style="color: var(--gold);">←</div>
+        <div style="background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 4px;">Telegram</div>
+      </div>
+      <div style="margin-top: 14px; font-size: 12px; color: var(--text-muted);">Stripe / ЮKassa подключается к сайту и боту независимо · Суpabase даёт единую БД для обоих каналов</div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION 6: ROADMAP ═══ -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">06</div>
+      <div class="section-meta">
+        <div class="section-eyebrow">План</div>
+        <h2 class="section-title">Дорожная карта</h2>
+      </div>
+    </div>
+
+    <div class="roadmap">
+      <div class="roadmap-phase">
+        <span class="phase-tag p1">Фаза 1</span>
+        <div class="phase-timeline">Недели 1–2 · Мини-сайт</div>
+        <ul class="phase-tasks">
+          <li>Лендинг + каталог яхт</li>
+          <li>Форма заявки</li>
+          <li>Интеграция → Telegram</li>
+          <li>Адаптив + SEO-разметка</li>
+          <li>Деплой на Vercel</li>
+        </ul>
+      </div>
+      <div class="roadmap-phase">
+        <span class="phase-tag p2">Фаза 2</span>
+        <div class="phase-timeline">Недели 3–4 · Бот</div>
+        <ul class="phase-tasks">
+          <li>Диалог подбора яхты</li>
+          <li>Проверка доступности</li>
+          <li>Лид → уведомление менеджеру</li>
+          <li>FAQ автоответы</li>
+          <li>Мультиязычность (RU/EN)</li>
+        </ul>
+      </div>
+      <div class="roadmap-phase">
+        <span class="phase-tag p3">Фаза 3</span>
+        <div class="phase-timeline">Месяц 2 · Онлайн-брони</div>
+        <ul class="phase-tasks">
+          <li>Календарь доступности</li>
+          <li>Приём депозита online</li>
+          <li>Подтверждения клиенту</li>
+          <li>Уведомления менеджеру</li>
+          <li>Личный кабинет клиента</li>
+        </ul>
+      </div>
+      <div class="roadmap-phase">
+        <span class="phase-tag p4">Фаза 4</span>
+        <div class="phase-timeline">Месяц 3+ · Автоматизация</div>
+        <ul class="phase-tasks">
+          <li>Напоминания за 24ч</li>
+          <li>Запрос отзыва после прогулки</li>
+          <li>Программа лояльности</li>
+          <li>Аналитика загрузки флота</li>
+          <li>Рассылки по базе</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+      <div style="background: var(--white); border: 1px solid var(--sand-dark); border-radius: 4px; padding: 22px;">
+        <div style="font-size: 20px; margin-bottom: 10px;">💰</div>
+        <div style="font-weight: 500; font-size: 14px; margin-bottom: 6px;">Ориентировочный бюджет</div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+          MVP (сайт + бот): $2 000–5 000<br>
+          Сервер + домен: ~$30/мес<br>
+          Stripe комиссия: 2.9% + $0.30
+        </div>
+      </div>
+      <div style="background: var(--white); border: 1px solid var(--sand-dark); border-radius: 4px; padding: 22px;">
+        <div style="font-size: 20px; margin-bottom: 10px;">📈</div>
+        <div style="font-weight: 500; font-size: 14px; margin-bottom: 6px;">Ключевые метрики</div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+          Конверсия сайта → лид: 3–7%<br>
+          Время ответа бота: &lt; 3 сек<br>
+          Окупаемость: 1–3 бронирования
+        </div>
+      </div>
+      <div style="background: var(--white); border: 1px solid var(--sand-dark); border-radius: 4px; padding: 22px;">
+        <div style="font-size: 20px; margin-bottom: 10px;">🎯</div>
+        <div style="font-weight: 500; font-size: 14px; margin-bottom: 6px;">Главный приоритет</div>
+        <div style="font-size: 13px; color: var(--text-muted); line-height: 1.6;">
+          Скорость первой версии. Запустить MVP за 2 недели, собрать обратную связь, итерировать.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<div class="footer">
+  <div class="footer-brand">YachtRental</div>
+  <div>Анализ рынка · Архитектура решения · 2025</div>
+  <div>Конфиденциально</div>
+</div>
+
+</body>
+</html>
